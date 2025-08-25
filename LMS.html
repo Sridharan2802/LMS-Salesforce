@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lease Management System – Salesforce App</title>
+  <meta name="description" content="A Salesforce-based Lease Management System for multi-store, multi-building property management." />
+  <style>
+    /* ===== CSS RESET (mini) ===== */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    img { max-width: 100%; display: block; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ===== THEME ===== */
+    :root{
+      --bg: #0f1320;
+      --bg-soft: #151a2c;
+      --panel: #11162a;
+      --text: #e7ecf3;
+      --muted: #a7b0c2;
+      --brand: #6ee7ff;       /* cyan */
+      --brand-2: #7c3aed;     /* violet */
+      --accent: #22c55e;      /* green */
+      --warning: #f59e0b;     /* amber */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --maxw: 1200px;
+      --grid-gap: clamp(14px, 2.2vw, 28px);
+      --pad-x: clamp(18px, 4vw, 40px);
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root{
+        --bg: #f7f8fb;
+        --bg-soft: #ffffff;
+        --panel: #ffffff;
+        --text: #0b1020;
+        --muted: #4a536b;
+        --shadow: 0 10px 30px rgba(20,40,80,.12);
+      }
+    }
+
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: radial-gradient(1200px 600px at 80% -10%, rgba(124,58,237,.18), transparent 60%) , radial-gradient(900px 500px at 10% 10%, rgba(110,231,255,.15), transparent 55%), var(--bg); color: var(--text); line-height: 1.6; }
+
+    .container { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--pad-x); }
+    .grid { display: grid; gap: var(--grid-gap); }
+
+    /* ===== ACCESSIBILITY ===== */
+    .skip-link { position: absolute; left: -999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+    .skip-link:focus { left: 16px; top: 16px; width: auto; height: auto; background: var(--brand-2); color: #fff; padding: 10px 14px; border-radius: 10px; }
+
+    /* ===== NAVBAR ===== */
+    header { position: sticky; top: 0; z-index: 50; backdrop-filter: saturate(140%) blur(10px); background: color-mix(in oklab, var(--bg) 75%, transparent); border-bottom: 1px solid color-mix(in oklab, var(--text) 12%, transparent); }
+    .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .2px; }
+    .logo { width: 28px; height: 28px; border-radius: 8px; background: conic-gradient(from 210deg at 50% 50%, var(--brand), var(--brand-2), var(--accent), var(--brand)); box-shadow: inset 0 0 0 2px rgba(255,255,255,.15), var(--shadow); }
+    .nav a { font-weight: 600; color: var(--text); }
+    .nav-links { display: flex; gap: 18px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; border: 1px solid color-mix(in oklab, var(--text) 14%, transparent); background: linear-gradient(180deg, color-mix(in oklab, var(--bg-soft) 80%, transparent), color-mix(in oklab, var(--panel) 90%, transparent)); box-shadow: var(--shadow); }
+    .btn:hover { border-color: color-mix(in oklab, var(--brand) 50%, #fff 0%); transform: translateY(-1px); }
+    .btn.primary { background: linear-gradient(180deg, color-mix(in oklab, var(--brand) 18%, var(--panel)), color-mix(in oklab, var(--brand-2) 18%, var(--panel))); color: #001018; border: none; }
+    .btn.ghost { background: transparent; box-shadow: none; }
+
+    /* ===== HERO ===== */
+    .hero { padding: clamp(48px, 7vw, 100px) 0; }
+    .hero-wrap { display: grid; gap: var(--grid-gap); grid-template-columns: 1.2fr 1fr; align-items: center; }
+    .hero h1 { font-size: clamp(28px, 4.4vw, 56px); line-height: 1.08; margin: 0 0 12px; letter-spacing: -.3px; }
+    .hero p { font-size: clamp(16px, 1.35vw, 20px); color: var(--muted); margin: 0 0 24px; }
+    .hero .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .hero-card { position: relative; border-radius: var(--radius-lg); padding: 20px; background: linear-gradient(180deg, color-mix(in oklab, var(--bg-soft) 88%, transparent), color-mix(in oklab, var(--panel) 96%, transparent)); border: 1px solid color-mix(in oklab, var(--text) 12%, transparent); box-shadow: var(--shadow); min-height: 320px; overflow: hidden; }
+    .hero-card::after{ content:""; position:absolute; inset: -30% -10% auto auto; width: 60%; height: 140%; background: radial-gradient(400px 200px at 80% 10%, rgba(110,231,255,.16), transparent 70%), radial-gradient(300px 180px at 90% 40%, rgba(124,58,237,.18), transparent 70%); filter: blur(10px); pointer-events:none; }
+
+    .stat-badges { position: absolute; bottom: 14px; left: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge { padding: 8px 12px; border-radius: 999px; border: 1px solid color-mix(in oklab, var(--text) 14%, transparent); background: color-mix(in oklab, var(--panel) 86%, transparent); font-size: 12px; color: var(--muted); }
+
+    /* ===== SECTION WRAPPER ===== */
+    section { padding: clamp(42px, 6.2vw, 90px) 0; }
+    .section-head { display: grid; gap: 8px; margin-bottom: 24px; }
+    .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 2.4px; color: var(--muted); }
+    h2 { font-size: clamp(22px, 3vw, 36px); margin: 0; }
+    .lead { color: var(--muted); max-width: 72ch; }
+
+    /* ===== CARDS / GRIDS ===== */
+    .cards { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--grid-gap); }
+    .card { grid-column: span 4; background: linear-gradient(180deg, color-mix(in oklab, var(--bg-soft) 88%, transparent), color-mix(in oklab, var(--panel) 96%, transparent)); border: 1px solid color-mix(in oklab, var(--text) 12%, transparent); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow); }
+    .card h3 { margin: 6px 0 8px; font-size: 18px; }
+    .card p { margin: 0; color: var(--muted); }
+
+    .icon { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in oklab, var(--brand) 35%, #fff 0%); }
+    .icon svg { width: 22px; height: 22px; }
+
+    /* ===== TIMELINE ===== */
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before { content: ""; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: color-mix(in oklab, var(--text) 15%, transparent); }
+    .tl-item { position: relative; margin-bottom: 18px; padding: 12px 14px 12px 18px; background: color-mix(in oklab, var(--panel) 90%, transparent); border: 1px solid color-mix(in oklab, var(--text) 12%, transparent); border-radius: 12px; }
+    .tl-item::before { content: ""; position: absolute; left: -11px; top: 16px; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, var(--brand), var(--brand-2)); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in oklab, var(--text) 10%, transparent); }
+
+    /* ===== PRICING ===== */
+    .pricing { display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--grid-gap); align-items: stretch; }
+    .price-card { grid-column: span 4; border-radius: var(--radius-lg); padding: 20px; background: linear-gradient(180deg, color-mix(in oklab, var(--bg-soft) 88%, transparent), color-mix(in oklab, var(--panel) 96%, transparent)); border: 1px solid color-mix(in oklab, var(--text) 12%, transparent); box-shadow: var(--shadow); }
+    .price-card.pop { outline: 2px solid color-mix(in oklab, var(--brand) 50%, transparent); transform: translateY(-4px); }
+    .price { font-size: 42px; font-weight: 800; letter-spacing: -0.5px; }
+    .price small { font-size: 14px; font-weight: 600; color: var(--muted); }
+    .feat { display: grid; gap: 8px; margin: 12px 0 16px; color: var(--muted); }
+
+    /* ===== FOOTER ===== */
+    footer { border-top: 1px solid color-mix(in oklab, var(--text) 12%, transparent); background: color-mix(in oklab, var(--bg) 94%, #000 6%); }
+    .footer-grid { display: grid; grid-template-columns: 1.2fr repeat(3, 1fr); gap: var(--grid-gap); padding: 36px 0; }
+    .credits { color: var(--muted); font-size: 14px; }
+
+    /* ===== UTIL ===== */
+    .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+    .kpi .pill { padding: 10px 12px; border-radius: 12px; background: color-mix(in oklab, var(--panel) 90%, transparent); border: 1px solid color-mix(in oklab, var(--text) 12%, transparent); color: var(--muted); text-align: center; font-weight: 700; }
+
+    .center { text-align: center; }
+
+    @media (max-width: 960px){
+      .hero-wrap{ grid-template-columns: 1fr; }
+      .card { grid-column: span 6; }
+      .price-card { grid-column: span 6; }
+      .footer-grid{ grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px){
+      .card { grid-column: span 12; }
+      .price-card { grid-column: span 12; }
+      .footer-grid{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header>
+    <div class="container nav" role="navigation" aria-label="Primary">
+      <a class="brand" href="#home" aria-label="Lease Management System home">
+        <span class="logo" aria-hidden="true"></span>
+        <span>LMS for Salesforce</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#modules">Modules</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#pricing">Pricing</a>
+        <a class="btn primary" href="#contact">Request Demo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ===== HERO ===== -->
+    <section id="home" class="hero">
+      <div class="container hero-wrap">
+        <div>
+          <h1>Lease Management System for Multi‑Store & Multi‑Building Operations</h1>
+          <p>
+            A Salesforce‑based application that digitizes the entire leasing lifecycle – from unit onboarding and tenant screening to e‑sign, billing, renewals, and analytics. Reduce manual work, ensure data accuracy, and unlock growth with real‑time insights.
+          </p>
+          <div class="cta-row">
+            <a class="btn primary" href="#contact">Get a Live Demo</a>
+            <a class="btn ghost" href="#features">Explore Features</a>
+          </div>
+          <div class="kpi">
+            <div class="pill">↓ 60% Manual Work</div>
+            <div class="pill">↑ 35% Time Saved</div>
+            <div class="pill">100% On Salesforce</div>
+          </div>
+        </div>
+        <aside class="hero-card" aria-label="Product highlight">
+          <h3 style="margin-top:0">One console. End‑to‑end control.</h3>
+          <p class="lead">Track vacancies, leases, payments, and compliance from a single pane of glass with role‑based access and audit trails.</p>
+          <div class="stat-badges">
+            <span class="badge">Smart Unit Inventory</span>
+            <span class="badge">Tenant 360°</span>
+            <span class="badge">Automated Billing</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===== FEATURES ===== -->
+    <section id="features">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Key features</span>
+          <h2>Everything you need to manage leases at scale</h2>
+          <p class="lead">Purpose‑built for property owners, landlords, and managers. Flexible enough for malls, commercial towers, and multi‑store portfolios.</p>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <div class="icon" aria-hidden="true">
+              <!-- Building SVG -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="3" width="8" height="18" rx="2"/>
+                <rect x="13" y="7" width="8" height="14" rx="2"/>
+                <path d="M7 7h0 M7 11h0 M7 15h0 M17 11h0 M17 15h0 M17 19h0" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Multi‑Building Inventory</h3>
+            <p>Create buildings, floors, and units with statuses, amenities, and pricing. Bulk upload & versioning supported.</p>
+          </article>
+
+          <article class="card">
+            <div class="icon" aria-hidden="true">
+              <!-- People SVG -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/>
+                <path d="M3 21a7 7 0 0 1 18 0"/>
+              </svg>
+            </div>
+            <h3>Tenant 360° & KYC</h3>
+            <p>Centralize applications, docs, e‑signatures, and screening checks. Maintain complete engagement history.</p>
+          </article>
+
+          <article class="card">
+            <div class="icon" aria-hidden="true">
+              <!-- Doc SVG -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+                <path d="M14 3v5h5"/>
+              </svg>
+            </div>
+            <h3>Digital Leases & Renewals</h3>
+            <p>Generate templates, route for approvals, and send for e‑sign. Auto‑create renewals and reminders.</p>
+          </article>
+
+          <article class="card">
+            <div class="icon" aria-hidden="true">
+              <!-- Billing SVG -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M8 12h8M12 8v8"/>
+              </svg>
+            </div>
+            <h3>Automated Billing</h3>
+            <p>Generate invoices, apply escalations & penalties, track payments, and sync to accounting.</p>
+          </article>
+
+          <article class="card">
+            <div class="icon" aria-hidden="true">
+              <!-- Workflow SVG -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="4" width="7" height="6" rx="2"/>
+                <rect x="14" y="14" width="7" height="6" rx="2"/>
+                <path d="M10 7h4a2 2 0 0 1 2 2v5"/>
+              </svg>
+            </div>
+            <h3>Workflows & SLAs</h3>
+            <p>Route tasks to leasing, legal, and finance. Track SLA compliance with alerts & escalations.</p>
+          </article>
+
+          <article class="card">
+            <div class="icon" aria-hidden="true">
+              <!-- Chart SVG -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M3 3v18h18"/>
+                <rect x="5" y="10" width="3" height="8"/>
+                <rect x="10" y="6" width="3" height="12"/>
+                <rect x="15" y="13" width="3" height="5"/>
+              </svg>
+            </div>
+            <h3>Dashboards & Alerts</h3>
+            <p>Vacancy heatmaps, rent roll, receivables, renewals due, and owner reports—all in real time.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== MODULES ===== -->
+    <section id="modules">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Modules</span>
+          <h2>End‑to‑end modules built on Salesforce</h2>
+          <p class="lead">From onboarding to offboarding, each module integrates with Salesforce objects, permissions, and automation.</p>
+        </div>
+
+        <div class="cards">
+          <article class="card"><h3>Property & Unit Catalog</h3><p>Buildings, stores, floors, and leasable units with availability calendars and pricing rules.</p></article>
+          <article class="card"><h3>Tenant Onboarding</h3><p>Applications, background checks, document capture, and digital signatures.</p></article>
+          <article class="card"><h3>Lease Lifecycle</h3><p>Draft & execute agreements, amendments, renewals, and terminations, with full audit trail.</p></article>
+          <article class="card"><h3>Billing & Collections</h3><p>Recurring invoices, deposits, arrears, escalations, and automated reminders.</p></article>
+          <article class="card"><h3>Maintenance & Tickets</h3><p>Service requests, vendor assignments, and SLA tracking with knowledge base.</p></article>
+          <article class="card"><h3>Analytics & Reporting</h3><p>Custom dashboards, scheduled reports, and management KPIs.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== WORKFLOW (TIMELINE) ===== -->
+    <section id="workflow">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Workflow</span>
+          <h2>How it works</h2>
+          <p class="lead">A clean, auditable flow across teams—configurable to your org with clicks and low code.</p>
+        </div>
+        <div class="timeline">
+          <div class="tl-item"><strong>1) Create building & unit inventory</strong><br/>Define locations, sizes, amenities, pricing, and availability.</div>
+          <div class="tl-item"><strong>2) Capture tenant application</strong><br/>Collect documents, run checks, and score applicants.</div>
+          <div class="tl-item"><strong>3) Generate digital lease</strong><br/>Use templates, route approvals, and send for e‑signature.</div>
+          <div class="tl-item"><strong>4) Automate billing</strong><br/>Recurring invoices, escalations, and reminders synced to finance.</div>
+          <div class="tl-item"><strong>5) Monitor operations</strong><br/>Dashboards for vacancies, receivables, renewals, and SLA alerts.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PRICING ===== -->
+    <section id="pricing">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Pricing</span>
+          <h2>Simple plans that scale with you</h2>
+          <p class="lead">All plans include core Salesforce integration, audit trails, and dashboarding.</p>
+        </div>
+        <div class="pricing">
+          <div class="price-card">
+            <h3>Starter</h3>
+            <div class="price">$19<span>/user</span> <small>/mo</small></div>
+            <div class="feat">
+              <div>Property & unit catalog</div>
+              <div>Tenant onboarding</div>
+              <div>Basic billing</div>
+            </div>
+            <a class="btn" href="#contact">Choose Starter</a>
+          </div>
+
+          <div class="price-card pop">
+            <h3>Growth</h3>
+            <div class="price">$39<span>/user</span> <small>/mo</small></div>
+            <div class="feat">
+              <div>All Starter features</div>
+              <div>Digital leases & renewals</div>
+              <div>Automation & SLA alerts</div>
+            </div>
+            <a class="btn primary" href="#contact">Choose Growth</a>
+          </div>
+
+          <div class="price-card">
+            <h3>Enterprise</h3>
+            <div class="price">Custom</div>
+            <div class="feat">
+              <div>Advanced analytics</div>
+              <div>Integrations & SSO</div>
+              <div>Premium support</div>
+            </div>
+            <a class="btn" href="#contact">Talk to Sales</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CONTACT ===== -->
+    <section id="contact">
+      <div class="container">
+        <div class="section-head center">
+          <span class="eyebrow">Get in touch</span>
+          <h2>Request a demo</h2>
+          <p class="lead" style="margin: 0 auto; max-width: 70ch;">Tell us about your buildings and team size. We’ll tailor a Salesforce demo for your portfolio.</p>
+        </div>
+        <form class="grid" style="max-width:760px; margin:0 auto; gap:14px">
+          <label class="card" style="grid-column: span 6">
+            <span style="display:block; font-weight:700; margin-bottom:6px">Name</span>
+            <input required placeholder="Your name" aria-label="Name" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid color-mix(in oklab, var(--text) 12%, transparent); background: color-mix(in oklab, var(--panel) 90%, transparent); color: var(--text);"/>
+          </label>
+          <label class="card" style="grid-column: span 6">
+            <span style="display:block; font-weight:700; margin-bottom:6px">Email</span>
+            <input type="email" required placeholder="you@company.com" aria-label="Email" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid color-mix(in oklab, var(--text) 12%, transparent); background: color-mix(in oklab, var(--panel) 90%, transparent); color: var(--text);"/>
+          </label>
+          <label class="card" style="grid-column: span 6">
+            <span style="display:block; font-weight:700; margin-bottom:6px">Company</span>
+            <input placeholder="Company name" aria-label="Company" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid color-mix(in oklab, var(--text) 12%, transparent); background: color-mix(in oklab, var(--panel) 90%, transparent); color: var(--text);"/>
+          </label>
+          <label class="card" style="grid-column: span 6">
+            <span style="display:block; font-weight:700; margin-bottom:6px">Portfolio size</span>
+            <select aria-label="Portfolio size" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid color-mix(in oklab, var(--text) 12%, transparent); background: color-mix(in oklab, var(--panel) 90%, transparent); color: var(--text);">
+              <option>Under 50 units</option>
+              <option>50–250 units</option>
+              <option>250–1000 units</option>
+              <option>1000+ units</option>
+            </select>
+          </label>
+          <label class="card" style="grid-column: span 12">
+            <span style="display:block; font-weight:700; margin-bottom:6px">Message</span>
+            <textarea rows="5" placeholder="Tell us about your needs" aria-label="Message" style="width:100%; padding:12px 14px; border-radius:10px; border:1px solid color-mix(in oklab, var(--text) 12%, transparent); background: color-mix(in oklab, var(--panel) 90%, transparent); color: var(--text);"></textarea>
+          </label>
+          <div style="grid-column: span 12; display:flex; gap:10px; justify-content:center">
+            <button type="submit" class="btn primary">Submit Request</button>
+            <a href="#features" class="btn">View Capabilities</a>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:8px"><span class="logo"></span><span>LMS for Salesforce</span></div>
+        <p class="credits">© <span id="y"></span> Lease Management System. Built on Salesforce.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <p class="credits">Features<br/>Pricing<br/>Security</p>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <p class="credits">Docs<br/>Support<br/>Status</p>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <p class="credits">About<br/>Careers<br/>Contact</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Minor progressive enhancement: dynamic year and smooth-scroll.
+    document.getElementById('y').textContent = new Date().getFullYear();
+    document.querySelectorAll('a[href^="#"]').forEach(a=>{
+      a.addEventListener('click', e=>{
+        const id = a.getAttribute('href');
+        if(id.length>1){ e.preventDefault(); document.querySelector(id).scrollIntoView({behavior:'smooth', block:'start'}); }
+      });
+    });
+  </script>
+</body>
+</html>
